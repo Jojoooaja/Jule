@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jule</title> 
+    <meta charset="UTF-8"> 
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        /* Variabel Warna Dark Mode */
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --chat-bg: #222222;
+            --input-bg: #333333;
+            --user-bubble: #007aff;
+            --ai-bubble: #444444;
+            --gemini-highlight: #747dff; 
+            --image-btn-color: #4CAF50; 
+            --border-color: #333;
+            --button-disabled: #555;
+            --error-color: #e74c3c; 
+        }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            background-color: var(--bg-color); 
+            color: var(--text-color);
+            margin: 0;
+        }
+        
+        #app-container { 
+            width: 100%; 
+            max-width: 800px; 
+            background: var(--chat-bg); 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            height: 90vh; 
+        }
+
+        /* Kontrol Header */
+        .header-controls {
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Gaya untuk Sub-header/Branding "Powered by" */
+        .app-title-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .app-title-container small {
+            font-size: 0.75em;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .header-controls select {
+            padding: 5px 10px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        h2 { margin: 0; color: var(--gemini-highlight); font-size: 1.2em; }
+
+        /* Jendela Chat */
+        #chat-window { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 30px; }
+        .message { padding: 10px 15px; border-radius: 15px; max-width: 90%; margin: 8px 0; line-height: 1.5; word-wrap: break-word; }
+        .user { background-color: var(--user-bubble); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .ai { background-color: var(--ai-bubble); color: var(--text-color); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .loading { color: #aaa; font-style: italic; align-self: flex-start; padding-left: 15px; }
+
+        /* Styling Gambar dan Error */
+        .message img { max-width: 100%; border-radius: 8px; margin-top: 10px; display: block; cursor: pointer; }
+        .ai.image-result { background-color: #2a3a40; }
+        .ai.image-result h4 { margin-top: 0; color: var(--image-btn-color); }
+        .ai.error-msg { background-color: #582424; color: var(--error-color); border: 1px solid var(--error-color); } 
+
+        /* Area Input */
+        #input-area { display: flex; padding: 15px 20px; border-top: 1px solid var(--border-color); background-color: var(--chat-bg); align-items: center; }
+        #file-upload-btn { background-color: transparent; border: none; color: var(--gemini-highlight); font-size: 1.5em; cursor: pointer; margin-right: 10px; padding: 5px; transition: color 0.2s; }
+        #file-input { display: none; }
+        .uploaded-file-preview { display: flex; align-items: center; background-color: var(--input-bg); padding: 5px 10px; border-radius: 20px; margin-right: 10px; font-size: 0.9em; color: var(--text-color); border: 1px solid var(--border-color); }
+        .uploaded-file-preview img { width: 20px; height: 20px; border-radius: 50%; margin-right: 5px; object-fit: cover; }
+        .uploaded-file-preview button { background: none; border: none; color: #ff6b6b; font-size: 1em; margin-left: 5px; cursor: pointer; }
+        input[type="text"] { flex-grow: 1; padding: 12px 20px; border-radius: 25px; border: 1px solid var(--border-color); margin-right: 10px; font-size: 1em; background-color: var(--input-bg); color: var(--text-color); transition: border-color 0.2s; }
+        input[type="text"]:focus { outline: none; border-color: var(--gemini-highlight); }
+
+        /* Tombol */
+        button { border: none; border-radius: 25px; padding: 0 20px; cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; height: 45px; color: white; }
+        button#send-button { background-color: var(--gemini-highlight); }
+        button#send-button:hover:not(:disabled) { background-color: #5d66e0; }
+        button#generate-image-btn { background-color: var(--image-btn-color); margin-left: 5px; padding: 0 15px; }
+        button#generate-image-btn:hover:not(:disabled) { background-color: #3e8e41; }
+        button:disabled { background-color: var(--button-disabled); cursor: not-allowed; }
+
+        /* Prompt Autentikasi */
+        .auth-prompt { padding: 20px; text-align: center; background-color: #333; border-top: 1px solid #444; color: #ccc; }
+        .auth-prompt button { background-color: var(--gemini-highlight); padding: 10px 20px; border-radius: 20px; margin-top: 10px; }
+        
+        /* Styling Footer */
+        #chat-footer {
+            text-align: center;
+            padding: 10px 0;
+            color: #666;
+            font-size: 0.8em;
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="header-controls">
+            <div class="app-title-container">
+                <h2>✨ Jule</h2>
+                <small>Powered by <a href="https://puter.ai" target="_blank" style="color: #747dff; text-decoration: none;">Puter.ai</a></small>
+            </div>
+            <select id="model-select">
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                <option value="claude-3-haiku">Claude 3 Haiku</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="gpt-5-nano">GPT-5 Nano (Paling Ringan)</option>
+            </select>
+        </div>
+
+        <div id="chat-window"></div>
+        
+        <div id="chat-footer">
+            Powered by <a href="https://puter.ai" target="_blank" style="color: #747dff; text-decoration: none;">Puter.ai</a>
+        </div>
+
+        <div id="input-area">
+            <button id="file-upload-btn">📎</button>
+            <input type="file" id="file-input" accept="image/*">
+            <div id="file-preview-container" style="display:none;">
+                <div class="uploaded-file-preview">
+                    <img id="file-preview-img" src="" alt="preview">
+                    <span id="file-preview-name"></span>
+                    <button id="remove-file-btn">x</button>
+                </div>
+            </div>
+            <input type="text" id="user-input" placeholder="Teks prompt untuk Chat, Gambar, atau analisis Gambar...">
+            
+            <button id="send-button">💬 Chat</button>
+            <button id="generate-image-btn">🎨 Gambar</button>
+        </div>
+    </div>
+
+    <script>
+        // --- PUTERS.JS STATE MANAGEMENT ---
+        puter.start({
+            messages: [
+                { role: 'ai', content: 'Selamat datang di Jule! Silakan Sign In ke Puter (untuk mengaktifkan AI), lalu pilih model dan mulai Chat.' }
+            ],
+            isSending: false, 
+            inputMessage: '',
+            uploadedFile: null, 
+            uploadedFilePuterPath: null, 
+            currentModel: 'gemini-2.5-flash' 
+        });
+
+        function cleanupFilePreview() {
+            const filePreviewImgElement = puter.id('file-preview-img').element;
+            if (filePreviewImgElement && filePreviewImgElement.src) {
+                URL.revokeObjectURL(filePreviewImgElement.src);
+            }
+            puter.state.inputMessage = ''; 
+            puter.state.uploadedFile = null;
+            puter.state.uploadedFilePuterPath = null;
+        }
+
+        function MessageComponent(props) {
+            let finalClass = props.isTemporary ? 'loading' : props.role;
+            if (props.isImageResult) finalClass += ' image-result';
+            if (props.isError) finalClass += ' error-msg'; 
+
+            let contentHtml = props.content;
+            if (Array.isArray(props.content)) {
+                contentHtml = props.content.map(item => {
+                    if (item.type === 'text') return item.text;
+                    if (item.type === 'file' && item.url) return `<img src="${item.url}" alt="gambar terunggah" onclick="window.open('${item.url}')">`;
+                    if (item.type === 'image_url') return `<img src="${item.url}" alt="gambar AI hasil generator" onclick="window.open('${item.url}')">`;
+                    return ''; 
+                }).join('<br>'); 
+            } else if (props.isImageResult && props.role === 'ai') {
+                 contentHtml = `<h4>🎨 Hasil Generasi Gambar</h4>${props.content}`;
+            }
+            return puter.element('div', { class: `message ${finalClass}`, html: contentHtml });
+        }
+
+        // --- FUNGSI GENERATE GAMBAR ---
+        async function generateImage() {
+            const prompt = puter.state.inputMessage.trim();
+            if (!prompt || puter.state.isSending) return;
+            
+            puter.state.isSending = true;
+
+            puter.state.messages = [...puter.state.messages, { role: 'user', content: `[GAMBAR PROMPT]: ${prompt}` }];
+            puter.state.inputMessage = ''; 
+            
+            const loadingIndex = puter.state.messages.length;
+            puter.state.messages = [...puter.state.messages, { role: 'ai', content: '🎨 AI sedang menciptakan gambar...', isTemporary: true, isImageResult: true }];
+            
+            try {
+                const result = await puter.ai.generateImage(prompt, { model: 'dall-e', size: '512x512', n: 1 });
+                
+                let finalMessages = puter.state.messages.filter((_, index) => index !== loadingIndex);
+                
+                if (result.images && result.images.length > 0) {
+                    const imageUrl = result.images[0].url;
+                    finalMessages = [...finalMessages, { 
+                        role: 'ai', 
+                        isImageResult: true,
+                        content: [
+                            { type: 'text', text: `Gambar berhasil dibuat! Klik gambar untuk resolusi penuh.` },
+                            { type: 'image_url', url: imageUrl }
+                        ] 
+                    }];
+                } else {
+                    throw new Error("Respons gambar tidak valid atau kosong.");
+                }
+                puter.state.messages = finalMessages;
+
+            } catch (error) {
+                console.error("Image Generation Error:", error);
+                puter.state.messages = puter.state.messages.filter((_, index) => index !== loadingIndex);
+                puter.state.messages = [...puter.state.messages, { role: 'ai', content: `[ERROR Gambar] Gagal membuat gambar. Detail: ${error.message}`, isError: true }];
+            } finally {
+                puter.state.isSending = false;
+            }
+        }
+
+        // --- FUNGSI CHAT TANPA FALLBACK OTOMATIS ---
+        async function sendChat() {
+            const currentInput = puter.state.inputMessage.trim();
+            const uploadedFile = puter.state.uploadedFile;
+            
+            if (!currentInput && !uploadedFile || puter.state.isSending) return;
+            
+            puter.state.isSending = true;
+            let userMessageContent = [];
+
+            if (currentInput) userMessageContent.push({ type: 'text', text: currentInput });
+
+            // 1. UPLOAD FILE jika ada
+            if (uploadedFile) {
+                let fileDisplayUrl = null;
+                let puterPath = puter.state.uploadedFilePuterPath;
+
+                try {
+                    fileDisplayUrl = URL.createObjectURL(uploadedFile);
+                    if (!puterPath) {
+                         const puterFile = await puter.fs.write(`user_upload_${Date.now()}_${uploadedFile.name}`, uploadedFile);
+                         puterPath = puterFile.path;
+                    }
+                    userMessageContent.push({ type: 'file', puter_path: puterPath, url: fileDisplayUrl });
+                    
+                } catch (e) {
+                    puter.state.isSending = false;
+                    puter.state.messages = [...puter.state.messages, { role: 'ai', content: `[ERROR File] Gagal mengunggah file. Detail: ${e.message}`, isError: true }];
+                    cleanupFilePreview();
+                    return;
+                }
+            }
+            
+            puter.state.messages = [...puter.state.messages, { role: 'user', content: userMessageContent }];
+            cleanupFilePreview(); 
+
+            const loadingIndex = puter.state.messages.length;
+            puter.state.messages = [...puter.state.messages, { role: 'ai', content: '💬 AI sedang berpikir...', isTemporary: true }];
+            
+            const originalModel = puter.state.currentModel;
+            const isMultimodal = uploadedFile !== null;
+            let messagesForChat = isMultimodal ? [{ role: 'user', content: userMessageContent }] : currentInput;
+            let finalMessages = puter.state.messages;
+
+            try {
+                // --- PERCOBAAN TUNGGAL DENGAN MODEL PILIHAN ---
+                const aiResponse = await puter.ai.chat(messagesForChat, { model: originalModel });
+                
+                // Success Handling
+                finalMessages = finalMessages.filter(msg => !msg.isTemporary);
+                finalMessages = [...finalMessages, { role: 'ai', content: aiResponse.text }];
+
+            } catch (finalError) {
+                // Error Handling Tunggal
+                finalMessages = finalMessages.filter(msg => !msg.isTemporary); // Hapus loading
+                let errorDetail = isMultimodal ? "Model ini mungkin tidak mendukung analisis gambar. Coba model lain." : `Terjadi kesalahan pada model ${originalModel}. Coba pilih model lain.`;
+                finalMessages = [...finalMessages, { role: 'ai', content: `[ERROR Chat] ${errorDetail} Detail: ${finalError.message}.`, isError: true }];
+            } finally {
+                puter.state.messages = finalMessages;
+                puter.state.isSending = false;
+            }
+        }
+
+        // --- FUNGSI RENDER (UPDATE UI) ---
+        puter.render(() => {
+            // Render pesan & Scroll
+            const chatElements = puter.state.messages.map(msg => MessageComponent(msg));
+            puter.id('chat-window').html = chatElements;
+            const chatWindow = puter.id('chat-window');
+            if (chatWindow.element) { setTimeout(() => { chatWindow.element.scrollTop = chatWindow.element.scrollHeight; }, 0); }
+
+            // Bindings Model Selection
+            const modelSelect = puter.id('model-select');
+            modelSelect.value = puter.state.currentModel;
+            modelSelect.onchange = (e) => { puter.state.currentModel = e.target.value; };
+
+            // Input & Tombol Logic
+            const isInputEmpty = puter.state.inputMessage.trim() === '';
+            const isFileUploaded = puter.state.uploadedFile !== null;
+            const isSending = puter.state.isSending;
+            
+            puter.id('user-input').value = puter.state.inputMessage;
+            puter.id('user-input').oninput = (e) => { puter.state.inputMessage = e.target.value; };
+
+            puter.id('send-button').disabled = isSending || (!isInputEmpty || isFileUploaded) === false;
+            puter.id('send-button').onclick = sendChat;
+
+            puter.id('generate-image-btn').disabled = isSending || isInputEmpty || isFileUploaded;
+            puter.id('generate-image-btn').onclick = generateImage;
+            
+            puter.id('user-input').onkeypress = (e) => { if (e.key === 'Enter') sendChat(); };
+
+            // --- File Upload Logic ---
+            const fileInput = puter.id('file-input');
+            const filePreviewContainer = puter.id('file-preview-container');
+            const filePreviewImg = puter.id('file-preview-img');
+            const filePreviewName = puter.id('file-preview-name');
+            const removeFileBtn = puter.id('remove-file-btn');
+            
+            puter.id('file-upload-btn').onclick = () => fileInput.element.click(); 
+
+            fileInput.onchange = (e) => { 
+                const file = e.target.files[0]; 
+                if (file) { 
+                    cleanupFilePreview(); 
+                    puter.state.uploadedFile = file; 
+                    fileInput.element.value = null; 
+                }
+            };
+            removeFileBtn.onclick = () => { cleanupFilePreview(); };
+
+            if (puter.state.uploadedFile) {
+                filePreviewImg.element.src = URL.createObjectURL(puter.state.uploadedFile);
+                filePreviewName.text = puter.state.uploadedFile.name;
+                filePreviewContainer.style.display = 'flex';
+            } else {
+                filePreviewContainer.style.display = 'none';
+            }
+
+            // --- Prompt Autentikasi ---
+            const authControls = [puter.id('send-button'), puter.id('generate-image-btn'), puter.id('file-upload-btn'), puter.id('user-input'), modelSelect];
+            
+            if (!puter.auth.isSignedIn()) {
+                if (!puter.id('auth-prompt-div').element) {
+                    puter.id('app-container').html += puter.element('div', { id: 'auth-prompt-div', class: 'auth-prompt', html: `Untuk menggunakan AI, Anda perlu ${puter.element('button', { html: 'Sign In ke Puter', onclick: () => puter.auth.signIn() } )}` });
+                }
+                authControls.forEach(c => c.disabled = true);
+            } else {
+                if (puter.id('auth-prompt-div').element) { puter.id('auth-prompt-div').remove(); }
+            }
+        });
+    </script>
+</body>
+</html>
